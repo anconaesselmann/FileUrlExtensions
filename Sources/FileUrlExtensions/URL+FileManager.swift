@@ -2,8 +2,24 @@
 //
 
 import Foundation
+#if os(macOS)
+import AppKit
+#endif
 
 public extension URL {
+
+    var fileName: String {
+        deletingPathExtension().lastPathComponent
+    }
+
+    var fileExtension: String {
+        pathExtension
+    }
+
+    var isDirectory: Bool {
+       (try? resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
+    }
+
     func exists(in fileManager: FileManager = FileManager.default) -> Bool {
         fileManager.fileExists(atPath: self.relativePath)
     }
@@ -19,6 +35,35 @@ public extension URL {
             attributes: nil
         )
         return self
+    }
+
+    func add(_ pathComponent: String) -> Self {
+        self.appendingPathComponent(pathComponent)
+    }
+
+    var subdirectories: [URL]? {
+        guard isDirectory else {
+            return nil
+        }
+        do {
+            return try FileManager.default.contentsOfDirectory(
+                at: self,
+                includingPropertiesForKeys: nil,
+                options: FileManager.DirectoryEnumerationOptions.includesDirectoriesPostOrder
+            )
+        } catch {
+            return nil
+        }
+    }
+
+    func showInFinder() {
+#if os(macOS)
+        if isDirectory {
+            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: self.path)
+        } else {
+            NSWorkspace.shared.activateFileViewerSelecting([self])
+        }
+#endif
     }
 
     static func appLibraryDirectory(in fileManager: FileManager = FileManager.default) throws -> URL {
